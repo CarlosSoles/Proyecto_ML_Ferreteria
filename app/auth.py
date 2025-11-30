@@ -2,9 +2,10 @@ from datetime import datetime, timedelta
 from typing import Optional
 from jose import JWTError, jwt
 from passlib.context import CryptContext
+import os
 
-# Clave secreta para codificación JWT (en producción, usar variable de entorno)
-SECRET_KEY = "supersecretkeyforcostossac"
+# Clave secreta para codificación JWT (leer desde variable de entorno en producción)
+SECRET_KEY = os.getenv("SECRET_KEY", "supersecretkeyforcostossac")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 

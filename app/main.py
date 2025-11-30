@@ -2,14 +2,25 @@ import uvicorn
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import RedirectResponse
+from fastapi.middleware.cors import CORSMiddleware
 from .router import router
 
 from pathlib import Path
+import os
 
 app = FastAPI(
     title="Predicción de demanda – Ferretería",
     description="API para estimar la demanda de cualquier producto usando un modelo entrenado.",
     version="0.1.0",
+)
+
+# Configurar CORS para producción
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # En producción, especifica tu dominio de Render
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # Montar carpeta estática (HTML)
