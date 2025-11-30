@@ -29,7 +29,7 @@ function getSeasonalMultipliers(productName, marca, categoria) {
     return productPattern;
 }
 
-// Initialize Charts immediately
+// Inicializar gráficos inmediatamente
 function initCharts() {
     try {
         const ctx = document.getElementById('demandChart').getContext('2d');
@@ -39,22 +39,22 @@ function initCharts() {
             options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: '#9CA3AF' } } }, scales: { y: { beginAtZero: true, grid: { color: '#374151' }, ticks: { color: '#9CA3AF' } }, x: { grid: { display: false }, ticks: { color: '#9CA3AF' } } } }
         });
     } catch (e) {
-        console.error("Error initializing main chart", e);
+        console.error("Error al inicializar gráfico principal", e);
     }
 }
 
-// Init Application
+// Inicializar Aplicación
 async function init() {
-    // 1. Initialize charts first (so they are visible even if data fails)
+    // 1. Inicializar gráficos primero (para que sean visibles incluso si fallan los datos)
     initCharts();
 
-    // 2. Set default date
+    // 2. Establecer fecha por defecto
     try {
         const dateInput = document.getElementById('inpHistFecha');
         if (dateInput) dateInput.valueAsDate = new Date();
     } catch (e) { console.error(e); }
 
-    // 3. Fetch Options
+    // 3. Obtener opciones del servidor
     try {
         const resp = await fetch('/options', { headers: { 'Authorization': `Bearer ${token}` } });
         if (resp.status === 401) window.location.href = '/static/login.html';
@@ -65,14 +65,14 @@ async function init() {
             updateDependentOptions();
             populateHistorySelects();
         } else {
-            console.error("Failed to load options");
+            console.error("Error al cargar opciones");
         }
     } catch (e) {
-        console.error("Error loading options", e);
+        console.error("Error al cargar opciones", e);
     }
 }
 
-// Navigation Logic
+// Lógica de Navegación
 document.querySelectorAll('.nav-item').forEach(item => {
     item.addEventListener('click', () => {
         const target = item.dataset.target;
@@ -93,31 +93,31 @@ document.querySelectorAll('.nav-item').forEach(item => {
     });
 });
 
-// Dashboard Tabs Logic
+// Lógica de Tabs del Dashboard
 document.querySelectorAll('.tab-btn').forEach(btn => {
     btn.addEventListener('click', () => {
         const view = btn.dataset.view;
         if (!view) return;
 
-        // Update active tab
+        // Actualizar tab activo
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
 
-        // Hide all views
+        // Ocultar todas las vistas
         document.querySelectorAll('.view-container').forEach(v => v.style.display = 'none');
 
-        // Show selected view
+        // Mostrar vista seleccionada
         const viewContainer = document.getElementById(`view-${view}`);
         if (viewContainer) viewContainer.style.display = 'block';
 
-        // Initialize charts for the view if needed
+        // Inicializar gráficos para la vista si es necesario
         if (view === 'temporal' && !temporalChartInstance) { initTemporalChart(); populateTemporalSelects(); }
         else if (view === 'variation' && !variationChartInstance) { initVariationChart(); populateVariationSelects(); }
         else if (view === 'top' && !topChartInstance) initTopChart();
     });
 });
 
-// Products Section Logic
+// Lógica de Sección de Productos
 async function loadHistory() {
     const tbody = document.getElementById('historyTableBody');
     if (!tbody) return;
@@ -142,7 +142,7 @@ async function loadHistory() {
             </tr>
         `).join('');
     } catch (e) {
-        console.error("Error loading history", e);
+        console.error("Error al cargar historial", e);
         tbody.innerHTML = '<tr><td colspan="5" style="padding:1rem; text-align:center; color:#EF4444;">Error al cargar historial.</td></tr>';
     }
 }
@@ -224,10 +224,10 @@ if (btnRetrain) {
         }
     });
 } else {
-    console.error("Retrain button not found in DOM");
+    console.error("Botón de reentrenamiento no encontrado en el DOM");
 }
 
-// Profile Settings Logic
+// Lógica de Configuración de Perfil
 const btnUpdateUsername = document.getElementById('btnUpdateUsername');
 if (btnUpdateUsername) {
     btnUpdateUsername.addEventListener('click', () => {
@@ -290,7 +290,7 @@ function initTemporalChart() {
             type: 'line', data: { labels: [], datasets: [{ label: 'Demanda Mensual', data: [], backgroundColor: 'rgba(59,130,246,0.1)', borderColor: '#3B82F6', borderWidth: 2, fill: true, tension: 0.4, pointBackgroundColor: '#3B82F6', pointBorderColor: '#fff', pointBorderWidth: 2, pointRadius: 5, pointHoverRadius: 7 }] },
             options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: '#9CA3AF' } } }, scales: { y: { beginAtZero: true, grid: { color: '#374151' }, ticks: { color: '#9CA3AF' } }, x: { grid: { display: false }, ticks: { color: '#9CA3AF' } } } }
         });
-    } catch (e) { console.error("Error init temporal chart", e); }
+    } catch (e) { console.error("Error al inicializar gráfico temporal", e); }
 }
 
 function initTopChart() {

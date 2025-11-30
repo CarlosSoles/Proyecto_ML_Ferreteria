@@ -2,16 +2,16 @@ import joblib
 import pandas as pd
 from pathlib import Path
 
-# Paths to the trained model and encoders
+# Rutas al modelo entrenado y encoders
 MODEL_PATH = Path(__file__).parent.parent / "model" / "rf_demand.pkl"
 ENCODERS_PATH = Path(__file__).parent.parent / "model" / "encoders.pkl"
 
-# Global variables
+# Variables globales
 model = None
 encoders = None
 
 def load_model():
-    """Load or reload the model and encoders from disk."""
+    """Cargar o recargar el modelo y encoders desde el disco."""
     global model, encoders
     if MODEL_PATH.exists():
         model = joblib.load(MODEL_PATH)
@@ -19,47 +19,47 @@ def load_model():
         encoders = joblib.load(ENCODERS_PATH)
     return model, encoders
 
-# Initial load
+# Carga inicial
 load_model()
 
 def safe_encode(encoder, value):
-    """Encode a categorical value using the provided encoder.
-    If the value is not present, try fallback values, then use first class.
+    """Codificar un valor categórico usando el encoder proporcionado.
+    Si el valor no está presente, intenta valores de respaldo, luego usa la primera clase.
     """
     if value in encoder.classes_:
         return encoder.transform([value])[0]
-    # Fallback values that were used during training
+    # Valores de respaldo que se usaron durante el entrenamiento
     defaults = ['desconocida', 'no especificado', 'sin categoría', 'boleta', 'efectivo', 'nan']
     for d in defaults:
         if d in encoder.classes_:
             return encoder.transform([d])[0]
-    # Last resort: use the first class
+    # Último recurso: usar la primera clase
     return encoder.transform([encoder.classes_[0]])[0]
 
 def preprocess(payload: dict) -> pd.DataFrame:
-    """Convert incoming JSON payload to a DataFrame matching the model's expected schema.
+    """Convertir payload JSON entrante a un DataFrame que coincida con el esquema esperado del modelo.
     
-    The improved model expects these 14 features in order:
-    Base features (6):
-    1-6. producto, tipo_producto, marca, categoria, metodo_pago, comprobante (categorical, encoded)
+    El modelo mejorado espera estas 14 características en orden:
+    Características base (6):
+    1-6. producto, tipo_producto, marca, categoria, metodo_pago, comprobante (categóricas, codificadas)
     
-    Numeric features (8):
+    Características numéricas (8):
     7. precio_unitario
     8. mes (1-12)
     9. trimestre (1-4)
     10. dia_semana (0-6)
-    11. es_fin_semana (0 or 1)
+    11. es_fin_semana (0 o 1)
     12. producto_popularidad
     13. producto_demanda_promedio
     14. precio_relativo
     """
-    # Create DataFrame from payload
+    # Crear DataFrame desde el payload
     df = pd.DataFrame([payload])
     
-    # Ensure precio_unitario is numeric
+    # Asegurar que precio_unitario sea numérico
     df["precio_unitario"] = pd.to_numeric(df["precio_unitario"], errors="coerce").fillna(0)
     
-    # Add temporal features (use current date if not provided)
+    # Agregar características temporales (usar fecha actual si no se proporciona)
     from datetime import datetime
     current_date = datetime.now()
     df['mes'] = current_date.month
@@ -67,45 +67,43 @@ def preprocess(payload: dict) -> pd.DataFrame:
     df['dia_semana'] = current_date.weekday()
     df['es_fin_semana'] = 1 if current_date.weekday() >= 5 else 0
     
-    # Load dataset for statistical features
-
-    # Load dataset for statistical features
+    # Cargar dataset para características estadísticas
     df_opts = _load_data()
 
     
-    # Add statistical features
+    # Agregar características estadísticas
     producto = payload.get('producto', 'Desconocido')
     categoria = payload.get('categoria', 'Sin categoría')
     
-    # Product popularity
+    # Popularidad del producto
     product_counts = df_opts.groupby('producto').size()
     df['producto_popularidad'] = product_counts.get(producto, 1)
     
-    # Average demand per product
+    # Demanda promedio por producto
     product_avg_demand = df_opts.groupby('producto')['cantidad'].mean()
     df['producto_demanda_promedio'] = product_avg_demand.get(producto, 100.0)
     if pd.isna(df['producto_demanda_promedio'].iloc[0]):
         df['producto_demanda_promedio'] = 100.0
     
-    # Average price per category
+    # Precio promedio por categoría
     category_avg_price = df_opts.groupby('categoria')['precio_unitario'].mean()
     categoria_precio_promedio = category_avg_price.get(categoria, df['precio_unitario'].iloc[0])
     if pd.isna(categoria_precio_promedio) or categoria_precio_promedio == 0:
         categoria_precio_promedio = df['precio_unitario'].iloc[0]
     
-    # Price relative to category average
+    # Precio relativo al promedio de la categoría
     if categoria_precio_promedio > 0:
         df['precio_relativo'] = df['precio_unitario'] / categoria_precio_promedio
     else:
         df['precio_relativo'] = 1.0
     
-    # Encode categorical columns (normalize text first - lowercase and strip)
+    # Codificar columnas categóricas (normalizar texto primero - minúsculas y quitar espacios)
     for col, encoder in encoders.items():
         if col in df.columns:
             df[col] = df[col].astype(str).str.strip().str.lower()
             df[col] = df[col].apply(lambda x: safe_encode(encoder, x))
     
-    # Return features in the exact order the model expects
+    # Retornar características en el orden exacto que espera el modelo
     feature_order = [
         "producto",
         "tipo_producto",
@@ -126,27 +124,27 @@ def preprocess(payload: dict) -> pd.DataFrame:
     return df[feature_order]
 
 
-# Path to the dataset used for dropdown options
+# Ruta al dataset usado para opciones de dropdowns
 DATA_PATH = Path(__file__).parent.parent / "ferreteria_COSTOS_ventas_2024.csv"
 _df_options = None
 
 def _load_data():
-    """Helper to load and preprocess the options dataframe."""
+    """Función auxiliar para cargar y preprocesar el dataframe de opciones."""
     global _df_options
     if _df_options is None:
         if not DATA_PATH.exists():
-            # Return empty DF with expected columns if file missing
+            # Retornar DF vacío con columnas esperadas si falta el archivo
             _df_options = pd.DataFrame(columns=['producto', 'tipo_producto', 'marca', 'categoria', 'cantidad', 'precio_unitario', 'metodo_pago'])
         else:
             _df_options = pd.read_csv(DATA_PATH)
             
-        # Apply fill strategy
+        # Aplicar estrategia de relleno
         _df_options['marca'] = _df_options['marca'].fillna('Desconocida')
         _df_options['tipo_producto'] = _df_options['tipo_producto'].fillna('No especificado')
         _df_options['categoria'] = _df_options['categoria'].fillna('Sin categoría')
         
-        # Ensure numeric columns are actually numeric
-        # coerce errors will turn non-numeric strings to NaN
+        # Asegurar que las columnas numéricas sean realmente numéricas
+        # coerce errors convertirá strings no numéricos a NaN
         if 'cantidad' in _df_options.columns:
             _df_options['cantidad'] = pd.to_numeric(_df_options['cantidad'], errors='coerce').fillna(0)
         if 'precio_unitario' in _df_options.columns:
@@ -155,10 +153,10 @@ def _load_data():
     return _df_options
 
 def get_options():
-    """Return unique values for dropdowns and mappings for dependent selects."""
+    """Retornar valores únicos para dropdowns y mapeos para selects dependientes."""
     df = _load_data()
     
-    # Build product -> marcas / categorias mappings
+    # Construir mapeos de producto -> marcas / categorias
     product_mappings = {}
     if 'producto' in df.columns:
         unique_products = sorted(df['producto'].astype(str).unique().tolist())
